@@ -38,10 +38,10 @@
         <div class="upload-box">
             <div class="options-group">
                 <label>
-                    <input type="checkbox" id="removeBgCheck" checked> إزالة الخلفية
+                    <input type="checkbox" id="removeBgCheck" checked> إزالة الخلفية (Remove.bg)
                 </label>
                 <label>
-                    <input type="checkbox" id="upscaleCheck"> تحسين وتوضيح الجودة
+                    <input type="checkbox" id="upscaleCheck"> تحسين وتوضيح الجودة (Clipdrop)
                 </label>
             </div>
 
@@ -85,7 +85,11 @@
     </div>
 
     <script>
-        const apiKey = "c4345216f809b19074ecb406ddec5210cb161a4c0d4f22239412c6133d9506188cf55da7b302075ec29d75915e80e270"; 
+        // ضع مفتاح Remove.bg الخاص بك هنا
+        const REMOVE_BG_KEY = "s71Rek37ZDuodthQyMqFkxzr"; 
+
+        // ضع مفتاح Clipdrop الخاص بك هنا
+        const CLIPDROP_KEY = "c4345216f809b19074ecb406ddec5210cb161a4c0d4f22239412c6133d9506188cf55da7b302075ec29d75915e80e270"; 
 
         const imageInput = document.getElementById('imageInput');
         const removeBgCheck = document.getElementById('removeBgCheck');
@@ -102,50 +106,54 @@
             const doUpscale = upscaleCheck.checked;
 
             if (!doRemoveBg && !doUpscale) {
-                alert("يرجى تحديد ميزة واحدة على الأقل!");
+                alert("يرجى اختيار ميزة واحدة على الأقل!");
                 return;
             }
 
             try {
-                // 1. إذا طلب إزالة الخلفية
+                // 1. تنفيذ إزالة الخلفية عبر Remove.bg
                 if (doRemoveBg) {
-                    statusText.innerText = "⏳ جاري إزالة الخلفية...";
+                    statusText.innerText = "⏳ جاري إزالة الخلفية عبر Remove.bg...";
                     const formDataBg = new FormData();
                     formDataBg.append('image_file', currentFile);
+                    formDataBg.append('size', 'auto');
 
-                    const resBg = await fetch('https://clipdrop-api.co/remove-background/v1', {
+                    const resBg = await fetch('https://api.remove.bg/v1.0/removebg', {
                         method: 'POST',
-                        headers: { 'x-api-key': apiKey },
+                        headers: { 'X-Api-Key': REMOVE_BG_KEY },
                         body: formDataBg
                     });
 
-                    if (!resBg.ok) throw new Error('فشلت عملية إزالة الخلفية');
+                    if (!resBg.ok) throw new Error("خطأ في إزالة الخلفية. تأكد من مفتاح Remove.bg.");
                     const blobBg = await resBg.blob();
-                    currentFile = new File([blobBg], "no-bg.png", { type: "image/png" });
+                    currentFile = new File([blobBg], "no_bg.png", { type: "image/png" });
                 }
 
-                // 2. إذا طلب تحسين الجودة
+                // 2. تنفيذ تحسين الجودة عبر Clipdrop
                 if (doUpscale) {
-                    statusText.innerText = "⏳ جاري تحسين الجودة وتوضيح التفاصيل...";
+                    statusText.innerText = "⏳ جاري تحسين وتوضيح الجودة عبر Clipdrop...";
                     const formDataUpscale = new FormData();
                     formDataUpscale.append('image_file', currentFile);
 
                     const resUpscale = await fetch('https://clipdrop-api.co/image-upscaling/v1/upscale', {
                         method: 'POST',
-                        headers: { 'x-api-key': apiKey },
+                        headers: { 'x-api-key': CLIPDROP_KEY },
                         body: formDataUpscale
                     });
 
-                    if (!resUpscale.ok) throw new Error('فشلت عملية تحسين الجودة (تأكد من وجود رصيد مجاني في الحساب)');
+                    if (!resUpscale.ok) throw new Error("خطأ في تحسين الجودة. تأكد من مفتاح Clipdrop أو رصيدك فيه.");
                     const blobUpscale = await resUpscale.blob();
                     currentFile = new File([blobUpscale], "upscaled.png", { type: "image/png" });
                 }
 
-                // عرض النتيجة النهائية
+                // عرض النتيجة
                 const finalUrl = URL.createObjectURL(currentFile);
-                imageContainer.innerHTML = `<img src="${finalUrl}" alt="النتيجة"><br><br><a href="${finalUrl}" download="soortak_result.png" style="background:#ff8c00; color:white; padding:10px 15px; text-decoration:none; border-radius:5px; font-weight:bold;">تحميل الصورة النهائية</a>`;
+                imageContainer.innerHTML = `
+                    <img src="${finalUrl}" alt="النتيجة"><br><br>
+                    <a href="${finalUrl}" download="soortak_result.png" style="background:#ff8c00; color:white; padding:10px 15px; text-decoration:none; border-radius:5px; font-weight:bold;">تحميل الصورة النهائية</a>
+                `;
                 resultArea.style.display = 'block';
-                statusText.innerText = "تمت معالجة الصورة بنجاح! ✨";
+                statusText.innerText = "تمت المعالجة بنجاح! ✨";
 
             } catch (error) {
                 console.error(error);
