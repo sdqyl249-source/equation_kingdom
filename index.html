@@ -36,7 +36,6 @@
         <p>اختر الخدمات المطلوبة ثم ارفع صورتك لتنفيذ العملية فوراً</p>
 
         <div class="upload-box">
-            <!-- تحديد الخيارات التي يريدها المستخدم -->
             <div class="options-group">
                 <label>
                     <input type="checkbox" id="removeBgCheck" checked> إزالة الخلفية
@@ -58,7 +57,6 @@
             <div id="imageContainer"></div>
         </div>
 
-        <!-- مساحة الإعلانات للربح -->
         <div class="ad-space">
             📢 [مساحة إعلانات Google AdSense - مصدر ربحك]
         </div>
@@ -87,7 +85,6 @@
     </div>
 
     <script>
-        // استبدل الرمز التالي بـ API Key الخاص بك من موقع Clipdrop
         const apiKey = "c4345216f809b19074ecb406ddec5210cb161a4c0d4f22239412c6133d9506188cf55da7b302075ec29d75915e80e270"; 
 
         const imageInput = document.getElementById('imageInput');
@@ -98,56 +95,63 @@
         const imageContainer = document.getElementById('imageContainer');
 
         imageInput.addEventListener('change', async function() {
-            let file = this.files[0];
-            if (!file) return;
+            let currentFile = this.files[0];
+            if (!currentFile) return;
 
             const doRemoveBg = removeBgCheck.checked;
             const doUpscale = upscaleCheck.checked;
 
             if (!doRemoveBg && !doUpscale) {
-                alert("يرجى اختيار ميزة واحدة على الأقل (إزالة الخلفية أو تحسين الجودة)!");
+                alert("يرجى تحديد ميزة واحدة على الأقل!");
                 return;
             }
 
-            statusText.innerText = "جاري معالجة الصورة بالذكاء الاصطناعي... انتظر لحظات";
-            
             try {
-                // 1. إذا تم تحديد إزالة الخلفية
+                // 1. إذا طلب إزالة الخلفية
                 if (doRemoveBg) {
-                    statusText.innerText = "جاري إزالة الخلفية...";
-                    file = await processImage(file, 'https://clipdrop-api.co/remove-background/v1');
+                    statusText.innerText = "⏳ جاري إزالة الخلفية...";
+                    const formDataBg = new FormData();
+                    formDataBg.append('image_file', currentFile);
+
+                    const resBg = await fetch('https://clipdrop-api.co/remove-background/v1', {
+                        method: 'POST',
+                        headers: { 'x-api-key': apiKey },
+                        body: formDataBg
+                    });
+
+                    if (!resBg.ok) throw new Error('فشلت عملية إزالة الخلفية');
+                    const blobBg = await resBg.blob();
+                    currentFile = new File([blobBg], "no-bg.png", { type: "image/png" });
                 }
 
-                // 2. إذا تم تحديد تحسين الجودة
+                // 2. إذا طلب تحسين الجودة
                 if (doUpscale) {
-                    statusText.innerText = "جاري تحسين وتوضيح جودة الصورة...";
-                    file = await processImage(file, 'https://clipdrop-api.co/image-upscaling/v1/upscale');
+                    statusText.innerText = "⏳ جاري تحسين الجودة وتوضيح التفاصيل...";
+                    const formDataUpscale = new FormData();
+                    formDataUpscale.append('image_file', currentFile);
+
+                    const resUpscale = await fetch('https://clipdrop-api.co/image-upscaling/v1/upscale', {
+                        method: 'POST',
+                        headers: { 'x-api-key': apiKey },
+                        body: formDataUpscale
+                    });
+
+                    if (!resUpscale.ok) throw new Error('فشلت عملية تحسين الجودة (تأكد من وجود رصيد مجاني في الحساب)');
+                    const blobUpscale = await resUpscale.blob();
+                    currentFile = new File([blobUpscale], "upscaled.png", { type: "image/png" });
                 }
 
-                const url = URL.createObjectURL(file);
-                imageContainer.innerHTML = `<img src="${url}" alt="النتيجة"><br><br><a href="${url}" download="soortak_result.png" style="background:#ff8c00; color:white; padding:10px 15px; text-decoration:none; border-radius:5px; font-weight:bold;">تحميل الصورة المعدلة</a>`;
+                // عرض النتيجة النهائية
+                const finalUrl = URL.createObjectURL(currentFile);
+                imageContainer.innerHTML = `<img src="${finalUrl}" alt="النتيجة"><br><br><a href="${finalUrl}" download="soortak_result.png" style="background:#ff8c00; color:white; padding:10px 15px; text-decoration:none; border-radius:5px; font-weight:bold;">تحميل الصورة النهائية</a>`;
                 resultArea.style.display = 'block';
                 statusText.innerText = "تمت معالجة الصورة بنجاح! ✨";
 
             } catch (error) {
-                statusText.innerText = "حدث خطأ أثناء معالجة الصورة. تأكد من صحة الـ API Key.";
+                console.error(error);
+                statusText.innerText = "⚠️ " + error.message;
             }
         });
-
-        async function processImage(imageFile, endpoint) {
-            const formData = new FormData();
-            formData.append('image_file', imageFile);
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'x-api-key': apiKey },
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('API Error');
-            const blob = await response.blob();
-            return new File([blob], "processed.png", { type: "image/png" });
-        }
     </script>
 
 </body>
